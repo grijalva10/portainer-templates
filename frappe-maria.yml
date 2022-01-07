@@ -1,0 +1,61 @@
+version: "3.7"
+
+services:
+  mariadb-master:
+    image: "bitnami/mariadb:10.3"
+    deploy:
+      restart_policy:
+        condition: on-failure
+    configs:
+      - source: frappe-mariadb-config
+        target: /opt/bitnami/mariadb/conf/bitnami/my_custom.cnf
+    networks:
+      - frappe-network
+    secrets:
+      - frappe-mariadb-root-password
+    volumes:
+      - "mariadb_master_data:/bitnami/mariadb"
+    environment:
+      - MARIADB_REPLICATION_MODE=master
+      - MARIADB_REPLICATION_USER=repl_user
+      - MARIADB_REPLICATION_PASSWORD_FILE=/run/secrets/frappe-mariadb-root-password
+      - MARIADB_ROOT_PASSWORD_FILE=/run/secrets/frappe-mariadb-root-password
+
+  mariadb-slave:
+    image: "bitnami/mariadb:10.3"
+    deploy:
+      restart_policy:
+        condition: on-failure
+    configs:
+      - source: frappe-mariadb-config
+        target: /opt/bitnami/mariadb/conf/bitnami/my_custom.cnf
+    networks:
+      - frappe-network
+    secrets:
+      - frappe-mariadb-root-password
+    volumes:
+      - "mariadb_slave_data:/bitnami/mariadb"
+    environment:
+      - MARIADB_REPLICATION_MODE=slave
+      - MARIADB_REPLICATION_USER=repl_user
+      - MARIADB_REPLICATION_PASSWORD_FILE=/run/secrets/frappe-mariadb-root-password
+      - MARIADB_MASTER_HOST=mariadb-master
+      - MARIADB_MASTER_PORT_NUMBER=3306
+      - MARIADB_MASTER_ROOT_PASSWORD_FILE=/run/secrets/frappe-mariadb-root-password
+
+volumes:
+  mariadb_master_data:
+  mariadb_slave_data:
+
+configs:
+  frappe-mariadb-config:
+    external: true
+
+secrets:
+  frappe-mariadb-root-password:
+    external: true
+
+networks:
+  frappe-network:
+    name: frappe-network
+    attachable: true
